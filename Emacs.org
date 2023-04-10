@@ -1,7 +1,7 @@
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 #+title: Emacs  Configuration
-
-* Package System Setup
+* General settings
+** Package System Setup
 
 #+begin_src emacs-lisp
 
@@ -25,13 +25,59 @@
 
 #+end_src
 
-* File limits
+** Clean .emacs.d
+
+#+begin_src emacs-lisp
+
+    ;; Change the user-emacs-directory to keep unwanted things out of ~/.emacs.d
+  (setq user-emacs-directory (expand-file-name "~/.cache/emacs/")
+        url-history-file (expand-file-name "url/history" user-emacs-directory))
+
+  ;; Use no-littering to automatically set common paths to the new user-emacs-directory
+  (use-package no-littering)
+
+  ;; Keep customization settings in a temporary file
+  (setq custom-file
+        (if (boundp 'server-socket-dir)
+            (expand-file-name "custom.el" server-socket-dir)
+          (expand-file-name (format "emacs-custom-%s.el" (user-uid)) temporary-file-directory)))
+  (load custom-file t)
+
+#+end_src
+
+** File limits
+
 #+BEGIN_SRC emacs-lisp
-(setq gc-cons-thresold 50000000)
-(setq large-file-warning-thresold 100000000)
+
+  (setq gc-cons-thresold (* 50 1000 1000))
+  (setq large-file-warning-thresold 100000000)
+
 #+END_SRC
 
-* Encoding
+** Startup performance
+
+#+begin_src emacs-lisp
+
+    ;; Profile emacs startup
+    (add-hook 'emacs-startup-hook
+              (lambda ()
+                (message "*** Emacs loaded in %s with %d garbage collections."
+                         (format "%.2f seconds"
+                                 (float-time
+                                  (time-subtract after-init-time before-init-time)))
+                         gcs-done)))
+
+  ;; Silence compiler warnings
+  (setq comp-async-report-warnings-errors nil)
+
+  ;; DISABLE INITIALIZATION WARNINGS
+
+  (setq warning-minimum-level :emergency)
+
+#+end_src
+
+** Encoding
+
 #+BEGIN_SRC emacs-lisp
 (prefer-coding-system 'utf-8)
 (set-default-coding-systems 'utf-8)
@@ -39,39 +85,50 @@
 (set-keyboard-coding-system 'utf-8)
 #+END_SRC
 
-* Basic UI Configuration
+** Basic UI Configuration
 
-This section configures basic UI settings that remove unneeded elements to make Emacs look a lot more minimal and modern.
+Make UI look minimal and modern.
 
 #+begin_src emacs-lisp
 
-  (setq inhibit-startup-message t)
-  (setq inhibit-startup-screen t)
+      (setq inhibit-startup-message t)
+      (setq inhibit-startup-screen t)
 
-  (setq scroll-margin 0
-        scroll-conservatively 100000
-        scroll-preserve-screen-position 1)   ; Sets normal scrolling behaviour
+      (setq scroll-margin 0
+            scroll-conservatively 100000
+            scroll-preserve-screen-position 1)   ; Sets normal scrolling behaviour
 
-  (setq scroll-margin 10)     ; Sets scroll margin to keep the cursor/point from getting within a certain distance of the top or bottom of the window
+      (setq scroll-margin 10)     ; Sets scroll margin to keep the cursor/point from getting within a certain distance of the top or bottom of the window
 
-  (setq-default word-wrap t)
+      (setq-default word-wrap t)
 
-  (scroll-bar-mode -1)        ; Disable visible scrollbar
-  (tool-bar-mode -1)          ; Disable the toolbar
-  (tooltip-mode -1)           ; Disable tooltips
+      (scroll-bar-mode -1)        ; Disable visible scrollbar
+      (tool-bar-mode -1)          ; Disable the toolbar
+      (tooltip-mode -1)           ; Disable tooltips
 
-  (menu-bar-mode -1)            ; Disable the menu bar
+      (menu-bar-mode -1)            ; Disable the menu bar
 
-  (setq display-line-numbers-type 'relative)
-  (global-display-line-numbers-mode)
+      (setq display-line-numbers-type 'relative)
+      (global-display-line-numbers-mode)
 
-    ;; Disable line numbers for some modes
-  (dolist (mode '(org-mode-hook
-                  term-mode-hook
-                  shell-mode-hook
-                  treemacs-mode-hook
-                  eshell-mode-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+        ;; Disable line numbers for some modes
+      (dolist (mode '(org-mode-hook
+                      term-mode-hook
+                      shell-mode-hook
+                      treemacs-mode-hook
+                      eshell-mode-hook))
+        (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+  ;; set transparent background
+
+  ;; (set-frame-parameter (selected-frame) 'alpha '(95 . 95))
+  ;; (add-to-list 'default-frame-alist '(alpha . (95 . 95)))
+
+  ;; maximize screan on start
+
+  (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
 
 #+end_src
 
@@ -105,15 +162,17 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
 
   (use-package general
     :config
-    (general-evil-setup t)
-    (general-create-definer verde/leader-keys
+    (general-evil-setup t))
+
+    (general-create-definer verde/leader-key
       :keymaps '(normal insert visual emacs)
       :prefix "SPC")
-    (general-create-definer verde/local-leader-keys
+
+    (general-create-definer verde/local-leader-key
       :states '(normal visual)
       :keymaps 'override
       :prefix ",")
-    )
+
   ;; TODO --> SET PREFIX FOR FILES, LSP
   ;; FIGURE OUT HOW TO USE LOCAL LEADER KEY FOR THIS
   (nvmap :prefix "SPC"
@@ -133,8 +192,11 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
          "es" '(eshell :which-key "Eshell")
          "fr" '(counsel-recentf :which-key "Recent files")
          "hrr" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload emacs config")
+         ;; Terminal
+         "t"   '(:ignore t :which-key "terminal")
+         "tm"  'multi-term
          ;; Windows splits
-         "w"   '(:ignore t :which-key "window")
+         "w"  '(:ignore t :which-key "window")
          "wc" '(evil-window-delete :which-key "Close window")
          "wn" '(evil-window-new :which-key "New window")
          "wh" '(evil-window-split :which-key "Horizontal split window")
@@ -153,6 +215,8 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
          "gf"  'magit-fetch
          "gF"  'magit-fetch-all
          "gr"  'magit-rebase
+
+
          )
 
 
@@ -222,7 +286,7 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
 
 ** Better Modeline
 
-[[https://github.com/seagle0128/doom-modeline][doom-modeline]] is a very attractive and rich (yet still minimal) mode line configuration for Emacs.  The default configuration is quite good but you can check out the [[https://github.com/seagle0128/doom-modeline#customize][configuration options]] for more things you can enable or disable.
+[[https://github.com/seagle0128/doom-modeline][doom-modeline]] is a very attractive and rich (yet still minimal) mode line configuration for Emacs.
 
 *NOTE:* The first time you load your configuration on a new machine, you'll need to run `M-x all-the-icons-install-fonts` so that mode line icons display correctly.
 
@@ -246,7 +310,7 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
   :init (which-key-mode)
   :diminish which-key-mode
   :config
-  (setq which-key-idle-delay 0.5))
+  (setq which-key-idle-delay 0.3))
 
 #+end_src
 
@@ -289,7 +353,7 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
 
 #+end_src
 
-** Helpful Help Commands
+** Helpful Commands
 
 [[https://github.com/Wilfred/helpful][Helpful]] adds a lot of very helpful (get it?) information to Emacs' =describe-= command buffers.  For example, if you use =describe-function=, you will not only get the documentation about the function, you will also see the source code of the function and where it gets used in other places in the Emacs configuration.  It is very useful for figuring out how things work in Emacs.
 
@@ -579,12 +643,238 @@ This snippet adds a hook to =org-mode= buffers so that =efs/org-babel-tangle-con
   ;; Automatically tangle our Emacs.org config file when we save it
   (defun efs/org-babel-tangle-config ()
     (when (string-equal (buffer-file-name)
-                        (expand-file-name "~/Projects/Code/emacs-from-scratch/Emacs.org"))
+                        (expand-file-name "~/.emacs.d/Emacs.org"))
       ;; Dynamic scoping to the rescue
       (let ((org-confirm-babel-evaluate nil))
         (org-babel-tangle))))
 
   (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'efs/org-babel-tangle-config)))
+
+#+end_src
+
+* Navigation
+
+** Marginalia
+
+#+begin_src emacs-lisp
+
+  (use-package marginalia
+    :general
+    (:keymaps 'minibuffer-local-map
+              "M-A" 'marginalia-cycle)
+    :custom
+    (marginalia-max-relative-age 0)
+    (marginalia-align 'right)
+    :init
+    (marginalia-mode))
+
+  (use-package all-the-icons-completion
+    :after (marginalia all-the-icons)
+    :hook (marginalia-mode . all-the-icons-completion-marginalia-setup)
+    :init
+    (all-the-icons-completion-mode))
+
+#+end_src
+
+** Vertico
+
+Vertico is a minibuffer interface, that is, it changes the minibuffer looks and how you interact with it.
+
+#+begin_src emacs-lisp
+
+  (use-package vertico
+    :demand t                             ; Otherwise won't get loaded immediately
+    :straight (vertico :files (:defaults "extensions/*") ; Special recipe to load extensions conveniently
+                       :includes (vertico-indexed
+                                  vertico-flat
+                                  vertico-grid
+                                  vertico-mouse
+                                  vertico-quick
+                                  vertico-buffer
+                                  vertico-repeat
+                                  vertico-reverse
+                                  vertico-directory
+                                  vertico-multiform
+                                  vertico-unobtrusive
+                                  ))
+    :general
+    (:keymaps '(normal insert visual motion)
+              "M-." #'vertico-repeat
+              )
+    (:keymaps 'vertico-map
+              "<tab>" #'vertico-insert ; Set manually otherwise setting `vertico-quick-insert' overrides this
+              "<escape>" #'minibuffer-keyboard-quit
+              "?" #'minibuffer-completion-help
+              "C-M-n" #'vertico-next-group
+              "C-M-p" #'vertico-previous-group
+              ;; Multiform toggles
+              "<backspace>" #'vertico-directory-delete-char
+              "C-w" #'vertico-directory-delete-word
+              "C-<backspace>" #'vertico-directory-delete-word
+              "RET" #'vertico-directory-enter
+              "C-i" #'vertico-quick-insert
+              "C-o" #'vertico-quick-exit
+              "M-o" #'kb/vertico-quick-embark
+              "M-G" #'vertico-multiform-grid
+              "M-F" #'vertico-multiform-flat
+              "M-R" #'vertico-multiform-reverse
+              "M-U" #'vertico-multiform-unobtrusive
+              "C-l" #'kb/vertico-multiform-flat-toggle
+              )
+    :hook ((rfn-eshadow-update-overlay . vertico-directory-tidy) ; Clean up file path when typing
+           (minibuffer-setup . vertico-repeat-save) ; Make sure vertico state is saved
+           )
+    :custom
+    (vertico-count 13)
+    (vertico-resize t)
+    (vertico-cycle nil)
+    ;; Extensions
+    (vertico-grid-separator "       ")
+    (vertico-grid-lookahead 50)
+    (vertico-buffer-display-action '(display-buffer-reuse-window))
+    (vertico-multiform-categories
+     '((file reverse)
+       (consult-grep buffer)
+       (consult-location)
+       (imenu buffer)
+       (library reverse indexed)
+       (org-roam-node reverse indexed)
+       (t reverse)
+       ))
+    (vertico-multiform-commands
+     '(("flyspell-correct-*" grid reverse)
+       (org-refile grid reverse indexed)
+       (consult-yank-pop indexed)
+       (consult-flycheck)
+       (consult-lsp-diagnostics)
+       ))
+    :init
+    (defun verde/vertico-multiform-flat-toggle ()
+      "Toggle between flat and reverse."
+      (interactive)
+      (vertico-multiform--display-toggle 'vertico-flat-mode)
+      (if vertico-flat-mode
+          (vertico-multiform--temporary-mode 'vertico-reverse-mode -1)
+        (vertico-multiform--temporary-mode 'vertico-reverse-mode 1)))
+    (defun verde/vertico-quick-embark (&optional arg)
+      "Embark on candidate using quick keys."
+      (interactive)
+      (when (vertico-quick-jump)
+        (embark-act arg)))
+
+    ;; Workaround for problem with `tramp' hostname completions. This overrides
+    ;; the completion style specifically for remote files! See
+    ;; https://github.com/minad/vertico#tramp-hostname-completion
+    (defun verde/basic-remote-try-completion (string table pred point)
+      (and (vertico--remote-p string)
+           (completion-basic-try-completion string table pred point)))
+    (defun verde/basic-remote-all-completions (string table pred point)
+      (and (vertico--remote-p string)
+           (completion-basic-all-completions string table pred point)))
+    (add-to-list 'completion-styles-alist
+                 '(basic-remote           ; Name of `completion-style'
+                   verde/basic-remote-try-completion verde/basic-remote-all-completions nil))
+    :config
+    (vertico-mode)
+    ;; Extensions
+    (vertico-multiform-mode)
+
+    ;; Prefix the current candidate with “» ”. From
+    ;; https://github.com/minad/vertico/wiki#prefix-current-candidate-with-arrow
+    (advice-add #'vertico--format-candidate :around
+                (lambda (orig cand prefix suffix index _start)
+                  (setq cand (funcall orig cand prefix suffix index _start))
+                  (concat
+                   (if (= vertico--index index)
+                       (propertize "» " 'face 'vertico-current)
+                     "  ")
+                   cand)))
+    )
+
+#+end_src
+
+** Orderless
+
+Orderless is an alternative and powerful completion style, that is, it is an alternative to Emacs’s basic candidate-filtering capacities.
+
+#+begin_src emacs-lisp
+
+  (use-package orderless
+    :custom
+    (completion-styles '(orderless))
+    (completion-category-defaults nil)    ; I want to be in control!
+    (completion-category-overrides
+     '((file (styles basic-remote ; For `tramp' hostname completion with `vertico'
+                     orderless
+                     ))
+       ))
+
+    (orderless-component-separator 'orderless-escapable-split-on-space)
+    (orderless-matching-styles
+     '(orderless-literal
+       orderless-prefixes
+       orderless-initialism
+       orderless-regexp
+       ;; orderless-flex
+       ;; orderless-strict-leading-initialism
+       ;; orderless-strict-initialism
+       ;; orderless-strict-full-initialism
+       ;; orderless-without-literal          ; Recommended for dispatches instead
+       ))
+    (orderless-style-dispatchers
+     '(prot-orderless-literal-dispatcher
+       prot-orderless-strict-initialism-dispatcher
+       prot-orderless-flex-dispatcher
+       ))
+    :init
+    (defun orderless--strict-*-initialism (component &optional anchored)
+      "Match a COMPONENT as a strict initialism, optionally ANCHORED.
+  The characters in COMPONENT must occur in the candidate in that
+  order at the beginning of subsequent words comprised of letters.
+  Only non-letters can be in between the words that start with the
+  initials.
+
+  If ANCHORED is `start' require that the first initial appear in
+  the first word of the candidate.  If ANCHORED is `both' require
+  that the first and last initials appear in the first and last
+  words of the candidate, respectively."
+      (orderless--separated-by
+       '(seq (zero-or-more alpha) word-end (zero-or-more (not alpha)))
+       (cl-loop for char across component collect `(seq word-start ,char))
+       (when anchored '(seq (group buffer-start) (zero-or-more (not alpha))))
+       (when (eq anchored 'both)
+         '(seq (zero-or-more alpha) word-end (zero-or-more (not alpha)) eol))))
+
+    (defun orderless-strict-initialism (component)
+      "Match a COMPONENT as a strict initialism.
+  This means the characters in COMPONENT must occur in the
+  candidate in that order at the beginning of subsequent words
+  comprised of letters.  Only non-letters can be in between the
+  words that start with the initials."
+      (orderless--strict-*-initialism component))
+
+    (defun prot-orderless-literal-dispatcher (pattern _index _total)
+      "Literal style dispatcher using the equals sign as a suffix.
+  It matches PATTERN _INDEX and _TOTAL according to how Orderless
+  parses its input."
+      (when (string-suffix-p "=" pattern)
+        `(orderless-literal . ,(substring pattern 0 -1))))
+
+    (defun prot-orderless-strict-initialism-dispatcher (pattern _index _total)
+      "Leading initialism  dispatcher using the comma suffix.
+  It matches PATTERN _INDEX and _TOTAL according to how Orderless
+  parses its input."
+      (when (string-suffix-p "," pattern)
+        `(orderless-strict-initialism . ,(substring pattern 0 -1))))
+
+    (defun prot-orderless-flex-dispatcher (pattern _index _total)
+      "Flex  dispatcher using the tilde suffix.
+  It matches PATTERN _INDEX and _TOTAL according to how Orderless
+  parses its input."
+      (when (string-suffix-p "." pattern)
+        `(orderless-flex . ,(substring pattern 0 -1))))
+    )
+
 
 #+end_src
 
@@ -611,28 +901,34 @@ The =which-key= integration adds helpful descriptions of the various keys so you
     ((lsp-mode . (lambda () (setq-local evil-lookup-func #'lsp-describe-thing-at-point)))
      (lsp-mode . lsp-enable-which-key-integration))
     :general
-    (verde/local-leader-keys
+    (verde/leader-key
       :states 'normal
       :keymaps 'lsp-mode-map
-      "i" '(:ignore t :which-key "import")
-      "i o" '(lsp-organize-imports :wk "optimize")
-      "l" '(:keymap lsp-command-map :wk "lsp")
-      "a" '(lsp-execute-code-action :wk "code action")
-      "r" '(lsp-rename :wk "rename"))
-    ;; (lsp-mode-map
-    ;;  :states 'normal
-    ;;  "gD" 'lsp-find-references)
+     ;; LSP
+      "l"   '(:ignore t :which-key "lsp")
+     "lgd" '(lsp-find-type-definition :which-key "type definition")
+     ;; lsp find
+     "ld" '(lsp-find-definition :which-key "definition")
+     "lr" '(lsp-find-references :which-key "reference")
+     "li" '(lsp-find-implementation :which-key "implementation")
+     ;; lsp format
+     "lf"  '(:ignore t :which-key "format")
+     "lfb" 'lsp-format-buffer
+     "lfr" 'lsp-format-region
+
+     "ln"  'lsp-rename
+      )
     :init
     (setq lsp-restart 'ignore)
-    (setq lsp-eldoc-enable-hover nil)
+    (setq lsp-eldoc-enable-hover t)
     (setq lsp-enable-file-watchers nil)
     (setq lsp-signature-auto-activate nil)
-    (setq lsp-modeline-diagnostics-enable nil)
+    (setq lsp-modeline-diagnostics-enable t)
     (setq lsp-keep-workspace-alive nil)
     (setq lsp-auto-execute-action nil)
     (setq lsp-before-save-edits nil)
     (setq lsp-headerline-breadcrumb-enable nil)
-    (setq lsp-diagnostics-provider :none)
+    (setq lsp-diagnostics-provider :flycheck)
     )
 
 #+end_src
@@ -651,7 +947,7 @@ The =which-key= integration adds helpful descriptions of the various keys so you
     ;; (:map lsp-ui-mode-map
     ;;       ([remap lsp-find-references] . lsp-ui-peek-find-references))
     :general
-    (lc/local-leader-keys
+    (verde/local-leader-key
      "h" 'lsp-ui-doc-show
      "H" 'lsp-ui-doc-hide)
     (lsp-ui-peek-mode-map
@@ -663,7 +959,7 @@ The =which-key= integration adds helpful descriptions of the various keys so you
      "C-j" 'nil
      "C-k" 'nil)
     :init
-    (setq lsp-ui-doc-show-with-cursor nil)
+    (setq lsp-ui-doc-show-with-cursor t)
     (setq lsp-ui-doc-show-with-mouse nil)
     (setq lsp-ui-peek-always-show t)
     (setq lsp-ui-peek-fontify 'always)
@@ -685,21 +981,22 @@ This package is built on the [[https://github.com/Alexander-Miller/treemacs][tre
 
 #+begin_src emacs-lisp
 
-  (use-package lsp-treemacs
-    :after lsp
-    :custom
-    (lsp-treemacs-theme "doom-colors")
-    (treemacs-width 35)
-    (treemacs-git-mode 'extended)
-    (treemacs-git-display-mode 'treemacs-git-display-mode-git-status)
-    (treemacs-show-hidden-files t)
-    (treemacs-silent-refresh t)
-    (treemacs-silent-filewatch t)
-    (treemacs-collapse-dirs 0)
-    (treemacs-filewatch-mode 'deferred)
-    :bind
-    (:map lsp-mode-map
-          ("M-p" . lsp-treemacs-toggle)))
+    (use-package lsp-treemacs
+      :after lsp
+      :custom
+      (lsp-treemacs-theme "doom-colors")
+      (treemacs-width 35)
+      (treemacs-git-mode 'extended)
+      (treemacs-git-display-mode 'treemacs-git-display-mode-git-status)
+      (treemacs-show-hidden-files t)
+      (treemacs-silent-refresh t)
+      (treemacs-silent-filewatch t)
+      (treemacs-collapse-dirs 0)
+      (treemacs-filewatch-mode 'deferred)
+      :bind
+      (:map lsp-mode-map ;; fix this
+            ("M-p" . treemacs)
+            ("M-s" . lsp-treemacs-symbols)))
 #+end_src
 
 **** lsp-ivy
@@ -763,31 +1060,38 @@ This will install the [[https://github.com/theia-ide/typescript-language-server]
                            (setq-local evil-lookup-func #'cider-doc)))
            (cider-mode . eldoc-mode))
     :general
-    (verde/local-leader-keys
+    (verde/local-leader-key
+     :states 'normal
      :keymaps 'clojure-mode-map
-     "c" '(cider-connect-clj :wk "connect")
-     "C" '(cider-connect-cljs :wk "connect (cljs)")
-     "j" '(cider-jack-in :wk "jack in")
-     "J" '(cider-jack-in-cljs :wk "jack in (cljs)")
-     "d d" 'cider-debug-defun-at-point
-     "e b" 'cider-eval-buffer
-     "e l" 'cider-eval-last-sexp
-     "e L" 'cider-pprint-eval-last-sexp-to-comment
-     "e d" '(cider-eval-defun-at-point :wk "defun")
-     "e D" 'cider-pprint-eval-defun-to-comment
+     ;; connect
+     "c"   '(:ignore t :which-key "cider connect/jack-in")
+     "cc" '(cider-connect-clj :wk "connect")
+     "cC" '(cider-connect-cljs :wk "connect (cljs)")
+     "cj" '(cider-jack-in :wk "jack in")
+     "cJ" '(cider-jack-in-cljs :wk "jack in (cljs)")
+     ;; debug
+     "d"   '(:ignore t :which-key "debug")
+     "dd" 'cider-debug-defun-at-point
+     ;; evaluation
+     "e"   '(:ignore t :which-key "eval")
+     "eb" 'cider-eval-buffer
+     "el" 'cider-eval-last-sexp
+     "eL" 'cider-pprint-eval-last-sexp-to-comment
+     "ed" '(cider-eval-defun-at-point :wk "defun")
+     "eD" 'cider-pprint-eval-defun-to-comment
      "h" 'cider-clojuredocs-web
      "K" 'cider-doc
      "q" '(cider-quit :qk "quit")
      )
-    (verde/local-leader-keys
+    (verde/local-leader-key
      :keymaps 'clojure-mode-map
      :states 'visual
      "e" 'cider-eval-region)
     :init
     (setq nrepl-hide-special-buffers t)
     (setq nrepl-sync-request-timeout nil)
-    (setq cider-repl-display-help-banner nil)
-    )
+    (setq cider-repl-display-help-banner nil))
+
 #+end_src
 
 *** Python
@@ -800,7 +1104,7 @@ This will install the [[https://github.com/theia-ide/typescript-language-server]
                        (when (executable-find "ipython")
                          (setq python-shell-interpreter (executable-find "ipython"))))))
       :general
-      (verde/local-leader-keys
+      (verde/local-leader-key
        :keymaps 'python-mode-map
        "'" 'run-python)
       (python-mode-map
@@ -848,7 +1152,7 @@ This will install the [[https://github.com/theia-ide/typescript-language-server]
 
   (use-package python-pytest
     :general
-    (verde/local-leader-keys
+    (verde/local-leader-key
      :keymaps 'python-mode-map
      "t" '(:ignore t :wk "test")
      "t d" '(python-pytest-dispatch :wk "dispatch")
@@ -880,7 +1184,7 @@ This will install the [[https://github.com/theia-ide/typescript-language-server]
 
   (use-package blacken
     :general
-    (verde/local-leader-keys
+    (verde/local-leader-key
      :keymaps 'python-mode-map
      "=" '(blacken-buffer :wk "format"))
     )
@@ -1044,6 +1348,5 @@ Install multi-term and bind it to C-c t
 #+begin_src emacs-lisp
 
   (use-package multi-term)
-  (global-set-key (kbd "C-c t") 'multi-term)
 
 #+end_src
