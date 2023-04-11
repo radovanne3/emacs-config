@@ -1,6 +1,40 @@
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 #+title: Emacs  Configuration
+
+* Initial Steps
+These steps need to be checked...
+** clone latest development emacs repo
+
+#+begin_src shell :tangle no
+  git clone --single-branch --branch=emacs-29 http://git.savannah.gnu.org/r/emacs.git
+#+end_src
+
+** run autogen script
+
+#+begin_src shell :tangle no
+  sudo ./autogen.sh
+#+end_src
+
+** run configure with native compilation
+
+#+begin_src shell :tangle no
+  sudo ./configure --with-native-compilation=aot --with-rsvg
+#+end_src
+
+** run make
+
+#+begin_src eshell :tangle no
+  sudo make
+#+end_src
+
+** run make install
+
+#+begin_src shell :tangle no
+  sudo make install
+#+end_src
+
 * General settings
+
 ** Package System Setup
 
 #+begin_src emacs-lisp
@@ -1368,7 +1402,7 @@ We also use [[https://github.com/sebastiencs/company-box][company-box]] to furth
 
 #+begin_src emacs-lisp
 
-  (use-package company
+  (use-package company ;; TODO: change to corfu??
     :after lsp-mode
     :hook (lsp-mode . company-mode)
     :bind (:map company-active-map
@@ -1448,7 +1482,7 @@ Emacs' built in commenting functionality =comment-dwim= (usually bound to =M-;=)
 #+begin_src emacs-lisp
 
   (use-package evil-nerd-commenter
-    :bind ("M-/" . evilnc-comment-or-uncomment-lines))
+    :bind ("M-/" . evilnc-comment-or-uncomment-lines)) ;; TODO - change to gcc or gc
 
 #+end_src
 
