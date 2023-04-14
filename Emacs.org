@@ -2,6 +2,7 @@
 #+title: Emacs  Configuration
 
 * Initial Steps
+
 These steps need to be checked...
 ** clone latest development emacs repo
 
@@ -212,31 +213,33 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
   ;; TODO --> SET PREFIX FOR FILES, LSP
   ;; FIGURE OUT HOW TO USE LOCAL LEADER KEY FOR THIS
   (nvmap :prefix "SPC"
-         "SPC" '(counsel-M-x :which-key "M-x")
-         "." '(find-file :which-key "Find File")
+        "SPC" '(counsel-M-x :wk "M-x")
+         "." '(find-file :wk "Find File")
          ;; Buffers
-         "b"   '(:ignore t :which-key "buffer")
+         "b"   '(:ignore t :wk "buffer")
          "bb" 'ibuffer
          "bk" 'kill-current-buffer
          "bn" 'next-buffer
          "bp" 'previous-buffer
-         "bB" '(ibuffer-list-buffers :which-key "List buffers")
+         "bB" '(ibuffer-list-buffers :wk "List buffers")
          "bK" 'kill-buffer
          ;; Eshell
-         "e"   '(:ignore t :which-key "eshell")
-         "eh" '(counsel-esh-history :which-key "Eshell history")
-         "es" '(eshell :which-key "Eshell")
-         "fr" '(counsel-recentf :which-key "Recent files")
+         "e"   '(:ignore t :wk "eshell")
+         "eh" '(counsel-esh-history :wk "[e]shell [h]istory")
+         "es" '(eshell :wk "[es]hell")
+         "f"   '(:ignore t :wk "format")
+         "fc" '(format-all-buffer :which-key "[f]ormat [c]ode")
+         "fr" '(format-all-region :which-key "[f]ormat [r]egion")
          "hrr" '((lambda () (interactive) (load-file "~/.emacs.d/init.el")) :which-key "Reload emacs config")
          ;; Terminal
-         "t"   '(:ignore t :which-key "terminal")
-         "tm"  'multi-term
+         "t"   '(:ignore t :wk "terminal")
+         "mt"  'multi-term
          ;; Windows splits
-         "w"  '(:ignore t :which-key "window")
-         "wc" '(evil-window-delete :which-key "Close window")
-         "wn" '(evil-window-new :which-key "New window")
-         "wh" '(evil-window-split :which-key "Horizontal split window")
-         "wv" '(evil-window-vsplit :which-key "Vertical split window")
+         "w"  '(:ignore t :wk "window")
+         "wc" '(evil-window-delete :wk "[w]indow [c]lose")
+         "wn" '(evil-window-new :wk "[w]indow [n]ew")
+         "wh" '(evil-window-split :wk "[w]indow [h]orizontal split")
+         "wv" '(evil-window-vsplit :wk "[w]indow [v]ertical split")
          ;; Git
          "g"   '(:ignore t :which-key "git")
          "gs"  'magit-status
@@ -251,11 +254,7 @@ This configuration uses [[https://evil.readthedocs.io/en/latest/index.html][evil
          "gf"  'magit-fetch
          "gF"  'magit-fetch-all
          "gr"  'magit-rebase
-
-
          )
-
-
 
   (use-package evil
     :init
@@ -1085,6 +1084,14 @@ Orderless is an alternative and powerful completion style, that is, it is an alt
 #+end_src
 
 * Development
+** Formating
+#+begin_src emacs-lisp
+
+      (use-package format-all
+        :init
+        (add-hook 'prog-mode-hook 'format-all-mode))
+
+#+end_src
 ** Languages
 *** IDE Features with lsp-mode
 **** lsp-mode
@@ -1394,11 +1401,8 @@ This will install the [[https://github.com/theia-ide/typescript-language-server]
 
 #+end_src
 
-** Company Mode
+** Company
 
-[[http://company-mode.github.io/][Company Mode]] provides a nicer in-buffer completion interface than =completion-at-point= which is more reminiscent of what you would expect from an IDE.  We add a simple configuration to make the keybindings a little more useful (=TAB= now completes the selection and initiates completion at the current location if needed).
-
-We also use [[https://github.com/sebastiencs/company-box][company-box]] to further enhance the look of the completions with icons and better overall presentation.
 
 #+begin_src emacs-lisp
 
@@ -1408,13 +1412,80 @@ We also use [[https://github.com/sebastiencs/company-box][company-box]] to furth
     :bind (:map company-active-map
            ("<tab>" . company-complete-selection))
           (:map lsp-mode-map
-           ("<tab>" . company-indent-or-complete-common))
+             ("C-SPC" . company-complete-common))
     :custom
     (company-minimum-prefix-length 1)
     (company-idle-delay 0.0))
 
   (use-package company-box
     :hook (company-mode . company-box-mode))
+
+  ;;(use-package corfu
+  ;; :hook (lsp-completion-mode . verde/corfu-setup-lsp) ; Use corfu for lsp completion
+  ;;   :straight (corfu :files (:defaults "extensions/*") ; Special recipe to load extensions conveniently
+  ;;                      :includes (corfu-popupinfo
+  ;;                                 corfu-echo
+  ;;                                 ))
+  ;;   :general
+  ;;   (:keymaps 'corfu-map
+  ;;             :states 'insert
+  ;;             "C-j" #'corfu-next
+  ;;             "C-k" #'corfu-previous
+  ;;             "<escape>" #'corfu-quit
+  ;;             "<return>" #'corfu-insert
+  ;;             "H-SPC" #'corfu-insert-separator
+  ;;             ;; "SPC" #'corfu-insert-separator ; Use when `corfu-quit-at-boundary' is non-nil
+  ;;             "C-g" #'corfu-quit
+  ;;             "M-l" #'corfu-show-location)
+  ;;   :custom
+  ;;   ;; Works with `indent-for-tab-command'. Make sure tab doesn't indent when you
+  ;;   ;; want to perform completion
+  ;;   (tab-always-indent 'complete)
+  ;;   (completion-cycle-threshold nil)      ; Always show candidates in menu
+
+  ;;   (corfu-auto t)
+  ;;   (corfu-auto-prefix 2)
+  ;;   (corfu-auto-delay 0.0)
+
+  ;;   (corfu-min-width 80)
+  ;;   (corfu-max-width corfu-min-width)     ; Always have the same width
+  ;;   (corfu-count 14)
+  ;;   (corfu-scroll-margin 4)
+  ;;   (corfu-cycle t)
+
+  ;;   (corfu-quit-at-boundary nil)
+  ;;   (corfu-separator ?\s)            ; Use space
+  ;;   (corfu-quit-no-match 'separator) ; Don't quit if there is `corfu-separator' inserted
+  ;;   (corfu-preview-current 'insert)  ; Preview first candidate. Insert on input if only one
+  ;;   (corfu-preselect-first t)        ; Preselect first candidate?
+
+  ;;   ;; Other
+  ;;   (corfu-echo-documentation t)        ; Already use corfu-doc
+  ;;   :init
+  ;;   (corfu-global-mode)
+  ;;   :config
+  ;;   (general-add-advice '(corfu--setup corfu--teardown) :after 'evil-normalize-keymaps)
+  ;;   (evil-make-overriding-map corfu-map)
+
+  ;;   ;; Enable Corfu more generally for every minibuffer, as long as no other
+  ;;   ;; completion UI is active. If you use Mct or Vertico as your main minibuffer
+  ;;   ;; completion UI. From
+  ;;   ;; https://github.com/minad/corfu#completing-with-corfu-in-the-minibuffer
+  ;;   (defun corfu-enable-always-in-minibuffer ()
+  ;;     "Enable Corfu in the minibuffer if Vertico/Mct are not active."
+  ;;     (unless (or (bound-and-true-p mct--active) ; Useful if I ever use MCT
+  ;;                 (bound-and-true-p vertico--input))
+  ;;       (setq-local corfu-auto nil)       ; Ensure auto completion is disabled
+  ;;       (corfu-mode 1)))
+  ;;   (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
+
+  ;;   ;; Setup lsp to use corfu for lsp completion
+  ;;   (defun verde/corfu-setup-lsp ()
+  ;;     "Use orderless completion style with lsp-capf instead of the
+  ;; default lsp-passthrough."
+  ;;     (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+  ;;           '(orderless))))
+
 
 #+end_src
 
